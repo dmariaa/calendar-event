@@ -1,0 +1,737 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../paper-listbox/paper-listbox.html">
+<link rel="import" href="../paper-item/paper-item.html">
+<link rel="import" href="../paper-input/paper-input.html">
+<link rel="import" href="../paper-input-time/paper-input-time.html">
+<link rel="import" href="../paper-checkbox/paper-checkbox.html">
+<link rel="import" href="../paper-button/paper-button.html">
+<link rel="import" href="../paper-input-date/paper-input-date.html">
+<link rel="import" href="../paper-radio-button/paper-radio-button.html">
+<link rel="import" href="../paper-dropdown-menu/paper-dropdown-menu.html">
+<link rel="import" href="../iron-collapse/iron-collapse.html">
+
+<link rel="import" href="button-group.html">
+
+<script src="../rrule/lib/rrule.js"></script>
+<script src="../rrule/lib/nlp.js"></script>
+<script src="../ical.js/build/ical.js"></script>
+
+<dom-module id="calendar-event">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+
+      paper-checkbox {
+        line-height: 49px;
+      }
+
+      paper-radio-button {
+        line-height: 37px;
+      }
+
+      .form-row {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .form-row > * {
+        margin-right: 10px;
+      }
+
+      .form-row iron-collapse {
+        width: 100%;
+      }
+
+      .form-align-top {
+        align-self: flex-start;
+      }
+
+      .form-column {
+        display: flex;
+        flex-direction: column;
+      }
+
+      paper-input,
+      paper-textarea {
+        flex: 1;
+      }
+
+      .rounded-button {
+        border-radius: 50%;
+        padding: 20px;
+        height: 1em;
+        min-width: auto;
+        width: 1em;
+        background-color: #f8f8f8;
+      }
+
+      .rounded-button[toggles][active] {
+        background-color: var(--selected-background-color, #cfcfcf);
+      }
+
+      [hidden] {
+        display: none;
+      }
+
+      .dates-row {
+        justify-content: flex-start;
+      }
+
+      .is-recurring .every {
+        max-width: 50px;
+      }
+
+      .is-recurring .frequency {
+        max-width: 150px;
+      }
+
+      .recurring-options {
+        margin-top: 10px;
+      }
+
+      .weekly-event > span {
+        line-height: 40px;
+      }
+
+      .weekly-event paper-button {
+        margin-right: 0px;
+      }
+
+      .monthly-event paper-radio-button {
+        flex-basis: 13%;
+      }
+
+      .monthly-event-buttons {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        max-width: 361px;
+      }
+
+      .monthly-event-buttons[disabled] {
+        pointer-events: none;
+        color: rgba(0,0,0,0.38);
+      }
+
+      .monthly-event-buttons > div {
+        flex-basis: 13%;
+        flex-shrink: 1;
+        flex-grow: 0;
+        min-width: 0;
+        margin: 0;
+      }
+
+      .monthly-event-buttons paper-button,
+      .yearly-event-buttons paper-button {
+        margin-bottom: 3px;
+      }
+
+      .yearly-event-buttons {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        max-width: 280px;
+      }
+
+      .yearly-event-buttons > div {
+        flex-basis: 16%;
+        flex-shrink: 1;
+        flex-grow: 0;
+        min-width: 0;
+        margin: 0;
+        border-radius: 0;
+      }
+
+      .yearly-event-buttons > paper-button[toggles][active] {
+        background-color: var(--selected-background-color,  #cfcfcf);
+      }
+
+      .ending > paper-dropdown-menu,
+      .ending > paper-input {
+        max-width: 130px;
+      }
+
+      @media all and (min-width: 720px) {
+        .form-row {
+          flex-direction: row;
+          align-items: flex-end;
+          justify-content: space-between;
+        }
+
+        .form-row-justify-left {
+          justify-content: flex-start;
+        }
+
+        .form-row-two > * {
+          flex-basis: 50%;
+        }
+
+        .form-row > *:last-child {
+          margin-right: 0px;
+        }
+      }
+    </style>
+
+    <!-- Name block -->
+    <div class="form-row">
+      <paper-input value="{{__name}}" label="Nombre *" class="event-name" required
+                   error-message="Campo obligatorio"></paper-input>
+    </div>
+
+    <!-- Start date and times block -->
+    <div class="form-row form-row-justify-left">
+        <paper-input-date value="{{__start_date}}" label="Desde *" class="event-date" required
+                          error-message="Campo obligatorio"></paper-input-date>
+        <paper-input-time id="start_time" value="{{__start_time}}" label="Inicio" class="event-time"
+                     disabled$="[[__all_day]]" always-float-label></paper-input-time>
+        <paper-input-time value="{{__end_time}}" label="Fin" class="event-time"
+                     disabled$="[[__all_day]]" always-float-label></paper-input-time>
+    </div>
+    <div class="form-row">
+      <paper-checkbox checked="{{__all_day}}">Todo el dia</paper-checkbox>
+    </div>
+
+    <!-- Is recurring block -->
+    <div class="form-row form-row-justify-left is-recurring">
+      <paper-checkbox checked="{{__is_recurring}}">Repetir</paper-checkbox>
+      <paper-input value="{{__interval}}" label="Cada" class="every"
+                   hidden="[[!__is_recurring]]"></paper-input>
+      <paper-dropdown-menu label="Frecuencia" hidden="[[!__is_recurring]]" class="frequency">
+        <paper-listbox
+                attr-for-selected="value"
+                slot="dropdown-content"
+                selected="{{__frequency}}" fallback-selection="0">
+          <paper-item value="3">Día</paper-item>
+          <paper-item value="2">Semana</paper-item>
+          <paper-item value="1">Mes</paper-item>
+          <paper-item value="0">Año</paper-item>
+        </paper-listbox>
+      </paper-dropdown-menu>
+    </div>
+
+    <!-- Is recurring options block -->
+    <div class="form-row recurring-options">
+      <iron-collapse opened$="[[__is_recurring]]">
+
+        <!-- Is recurring daily block -->
+        <div class="form-row" hidden="[[__daily_hidden]]"></div>
+
+        <!-- Is recurring weekly block -->
+        <div class="form-row form-row-justify-left weekly-event" hidden="[[__weekly_hidden]]">
+          <span>El:</span>
+          <button-group value="{{__weekly_days}}">
+            <paper-button class="rounded-button" toggles value="0">L</paper-button>
+            <paper-button class="rounded-button" toggles value="1">M</paper-button>
+            <paper-button class="rounded-button" toggles value="2">X</paper-button>
+            <paper-button class="rounded-button" toggles value="3">J</paper-button>
+            <paper-button class="rounded-button" toggles value="4">V</paper-button>
+            <paper-button class="rounded-button" toggles value="5">S</paper-button>
+            <paper-button class="rounded-button" toggles value="6">D</paper-button>
+          </button-group>
+        </div>
+
+        <!-- Is recurring monthly block -->
+        <div class="form-column" hidden="[[__monthly_hidden]]">
+
+          <div class="form-row form-row-justify-left monthly-event">
+            <paper-radio-button id="monthly_every"
+                                value="every"
+                                class="form-align-top monthly-event-select"
+                                on-iron-change="_changeMonthlyMode"
+                                checked="[[__monthly_mode_every]]">Cada</paper-radio-button>
+              <button-group value="{{__monthly_days}}" class="monthly-event-buttons" disabled$="[[!__monthly_mode_every]]">
+                <template is="dom-repeat" items="[[__monthDays]]">
+                  <div><paper-button toggles value$="{{item}}" class="rounded-button">[[item]]</paper-button></div>
+                </template>
+              </button-group>
+          </div>
+
+          <div class="monthly-event form-row-justify-left form-row">
+            <paper-radio-button value="on"
+                                class="form-align-top monthly-event-select"
+                                on-iron-change="_changeMonthlyMode"
+                                checked="[[!__monthly_mode_every]]">El</paper-radio-button>
+            <div class="form-row">
+              <paper-dropdown-menu label="Cada" disabled="[[__monthly_mode_every]]">
+                <paper-listbox slot="dropdown-content"
+                               attr-for-selected="value"
+                               selected="{{__monthly_pos}}"
+                               fallback-selection="1">
+                  <paper-item value="1">Primer</paper-item>
+                  <paper-item value="2">Segundo</paper-item>
+                  <paper-item value="3">Tercer</paper-item>
+                  <paper-item value="4">Cuarto</paper-item>
+                  <paper-item value="5">Quinto</paper-item>
+                  <div class="divider"></div>
+                  <paper-item value="-1">Último</paper-item>
+                </paper-listbox>
+              </paper-dropdown-menu>
+              <paper-dropdown-menu label="Día"  disabled="[[__monthly_mode_every]]">
+                <paper-listbox
+                    slot="dropdown-content"
+                    attr-for-selected="value"
+                    selected="{{__monthly_day}}"
+                    fallback-selection="0">
+                  <paper-item value="0">Lunes</paper-item>
+                  <paper-item value="1">Martes</paper-item>
+                  <paper-item value="2">Miércoles</paper-item>
+                  <paper-item value="3">Jueves</paper-item>
+                  <paper-item value="4">Viernes</paper-item>
+                  <paper-item value="5">Sabado</paper-item>
+                  <paper-item value="6">Domingo</paper-item>
+                  <div class="divider"></div>
+                  <paper-item value="-3">Día</paper-item>
+                  <paper-item value="-2">Día de la semana</paper-item>
+                  <paper-item value="-1">Día del fin de semana</paper-item>
+                </paper-listbox>
+              </paper-dropdown-menu>
+            </div>
+          </div>
+        </div>
+
+        <!-- Is recurring yearly block -->
+        <div class="form-column form-row-justify-left" hidden="[[__yearly_hidden]]">
+          <div class="form-row form-row-justify-left">
+            <div class="form-align-top">En</div>
+            <button-group class="yearly-event-buttons form-row-justify-left" value="{{__yearly_months}}">
+              <div><paper-button class="rounded-button" toggles value="1">Ene.</paper-button></div>
+              <div><paper-button class="rounded-button" toggles value="2">Feb.</paper-button></div>
+              <div><paper-button class="rounded-button" toggles value="3">Mar.</paper-button></div>
+              <div><paper-button class="rounded-button" toggles value="4">Abr.</paper-button></div>
+              <div><paper-button class="rounded-button" toggles value="5">May.</paper-button></div>
+              <div><paper-button class="rounded-button" toggles value="6">Jun.</paper-button></div>
+              <div><paper-button class="rounded-button" toggles value="7">Jul.</paper-button></div>
+              <div><paper-button class="rounded-button" toggles value="8">Ago.</paper-button></div>
+              <div><paper-button class="rounded-button" toggles value="9">Sep.</paper-button></div>
+              <div><paper-button class="rounded-button" toggles value="10">Oct.</paper-button></div>
+              <div><paper-button class="rounded-button" toggles value="11">Nov.</paper-button></div>
+              <div><paper-button class="rounded-button" toggles value="12">Dic.</paper-button></div>
+            </button-group>
+          </div>
+          <div class="form-row form-row-justify-left">
+            <paper-checkbox checked="{{__yearly_on}}">El</paper-checkbox>
+            <paper-dropdown-menu label="Cada" disabled$="[[!__yearly_on]]">
+              <paper-listbox slot="dropdown-content"
+                             attr-for-selected="value"
+                             selected="{{__yearly_pos}}"
+                             fallback-selection="1">
+                <paper-item value="1">Primer</paper-item>
+                <paper-item value="2">Segundo</paper-item>
+                <paper-item value="3">Tercer</paper-item>
+                <paper-item value="4">Cuarto</paper-item>
+                <paper-item value="5">Quinto</paper-item>
+                <div class="divider"></div>
+                <paper-item value="-1">Último</paper-item>
+              </paper-listbox>
+            </paper-dropdown-menu>
+            <paper-dropdown-menu label="Día" disabled$="[[!__yearly_on]]">
+              <paper-listbox
+                  slot="dropdown-content"
+                  attr-for-selected="value"
+                  selected="{{__yearly_day}}"
+                  fallback-selection="0">
+                <paper-item value="0">Lunes</paper-item>
+                <paper-item value="1">Martes</paper-item>
+                <paper-item value="2">Miércoles</paper-item>
+                <paper-item value="3">Jueves</paper-item>
+                <paper-item value="4">Viernes</paper-item>
+                <paper-item value="5">Sabado</paper-item>
+                <paper-item value="6">Domingo</paper-item>
+                <div class="divider"></div>
+                <paper-item value="-3">Día</paper-item>
+                <paper-item value="-2">Día de la semana</paper-item>
+                <paper-item value="-1">Día del fin de semana</paper-item>
+              </paper-listbox>
+              </paper-listbox>
+            </paper-dropdown-menu>
+          </div>
+        </div>
+
+        <!-- Is recurring ending block -->
+        <div class="ending form-row-justify-left form-row">
+          <paper-dropdown-menu label="Termina">
+            <paper-listbox slot="dropdown-content"
+                           attr-for-selected="value"
+                           selected="{{__end}}"
+                           fallback-selection="0">
+              <paper-item value="0">Nunca</paper-item>
+              <paper-item value="1">El</paper-item>
+              <paper-item value="2">Despues de</paper-item>
+            </paper-listbox>
+          </paper-dropdown-menu>
+          <paper-input-date value="{{__end_date}}"
+                            label="Dia *"
+                            class="event-date"
+                            required="[[!__ending_date_hidden]]"
+                            auto-validate
+                            error-message="Campo obligatorio"
+                            hidden="[[__end_date_hidden]]"></paper-input-date>
+          <paper-input id="end_count"
+                       value="{{__end_count}}"
+                       label="Ocurrencias"
+                       always-float-label
+                       allowed-pattern="[0-9]"
+                       pattern="[0-9]*"
+                       maxlength="5"
+                       min="0"
+                       size="5"
+                       auto-validate
+                       hidden="[[__end_count_hidden]]"
+                       required="[[!__end_count_hidden]]"
+                       error-message="Campo obligatorio"></paper-input>
+        </div>
+      </iron-collapse>
+    </div>
+  </template>
+
+  <script>
+    /**
+     * `calendar-event`
+     *
+     *
+     * @customElement
+     * @polymer
+     * @demo demo/index.html
+     */
+    class CalendarEvent extends Polymer.Element {
+      static get is() { return 'calendar-event'; }
+      static get properties() {
+        return {
+          value: {
+            type: String,
+            notify: true
+          },
+
+          rule: {
+            type: Object
+          },
+
+          event: {
+            type: String,
+            notify: true
+          },
+
+          __name: {
+            type: String
+          },
+          __start_date: {
+            type: String,
+            notify: true,
+            value: function() {
+              var d = new Date();
+              return d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2)
+            }
+          },
+          __start_time: {
+            type: String,
+            notify: true,
+            value: function() {
+              var d = new Date();
+              var s = this._pad(d.getHours(),2)+":"+this._pad(d.getMinutes(),2)+":"+this._pad(d.getSeconds(),2);
+              return s;
+            }
+          },
+          __end_time: {
+            type: String,
+            notify: true,
+          },
+          __all_day: {
+            type: Boolean
+          },
+          __is_recurring: {
+            type: Boolean
+          },
+          __frequency: {
+            type: Number,
+            value: 3
+          },
+          __interval: {
+            type: Number,
+            value: 1
+          },
+
+          __weekly_days: {
+            type: Array,
+            value: function() { return new Array(); }
+          },
+
+          __monthly_mode_every: {
+            type: Boolean,
+            value: true
+          },
+          __monthly_days: {
+            type: Array
+          },
+          __monthly_pos: {
+            type: Number
+          },
+          __monthly_day: {
+            type: Number
+          },
+
+          __yearly_months: {
+            type: Array,
+            value: function() { return new Array(); }
+          },
+          __yearly_on: {
+            type: Boolean
+          },
+          __yearly_pos: {
+            type: Number
+          },
+          __yearly_day: {
+            type: Number
+          },
+
+          __end: {
+            type: Number
+          },
+          __end_date: {
+            type: String,
+            value: function() {
+              var d = new Date();
+              return d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2)
+            }
+          },
+          __end_count: {
+            type: Number,
+            value: 1
+          }
+        };
+      }
+
+      static get observers() {
+        return [
+          '_ruleChanged(__name,__start_date,__start_time,__end_time,__all_day,__is_recurring,__frequency,__interval,' +
+            '__weekly_days.splices, __monthly_mode_every, __monthly_days.splices, __monthly_pos, __monthly_day,' +
+            '__yearly_months.splices, __yearly_on, __yearly_pos, __yearly_day, __end, __end_date, __end_count)'
+        ];
+      }
+
+      constructor() {
+        super();
+        this.rule="";
+        this.__monthDays = [];
+        for (var i = 1; i <= 31; i++) {
+          this.__monthDays.push(i);
+        }
+      }
+
+      _ruleChanged() {
+        this._computeRule();
+      }
+
+      _computeRule() {
+        var _rule = {};
+
+        if(this.__all_day) {
+          this.__start_time="00:00:00";
+          this.__end_time="23:59:59";
+        }
+
+        if(this.__is_recurring) {
+          _rule.dtstart = new Date(this.__start_date);
+          _rule.freq = +this.__frequency;
+          _rule.interval = +this.__interval;
+
+          switch (+this.__frequency) {
+            case 0:
+              _rule.bymonth = this.__yearly_months.map(function (v) {
+                return parseInt(v);
+              });
+
+              if (this.__yearly_on) {
+                _rule.bysetpos = +this.__yearly_pos;
+                if (this.__yearly_day >= 0) {
+                  _rule.byweekday = +this.__yearly_day;
+                } else if (this.__yearly_day == -3) {
+                  _rule.byweekday = [0, 1, 2, 3, 4, 5, 6];
+                } else if (this.__yearly_day == -2) {
+                  _rule.byweekday = [0, 1, 2, 3, 4, 5];
+                } else if (this.__yearly_day == -1) {
+                  _rule.byweekday = [5, 6];
+                }
+              }
+              break;
+            case 1:
+              if (this.__monthly_mode_every) {
+                _rule.bymonthday = this.__monthly_days.map(function (v) {
+                  return parseInt(v);
+                });
+              } else {
+                _rule.bysetpos = +this.__monthly_pos;
+                if (this.__monthly_day >= 0) {
+                  _rule.byweekday = +this.__monthly_day;
+                } else if (this.__monthly_day == -3) {
+                  _rule.byweekday = [0, 1, 2, 3, 4, 5, 6];
+                } else if (this.__monthly_day == -2) {
+                  _rule.byweekday = [0, 1, 2, 3, 4];
+                } else if (this.__monthly_day == -1) {
+                  _rule.byweekday = [5, 6];
+                }
+              }
+              break;
+            case 2:
+              _rule.byweekday = this.__weekly_days.map(function (v) {
+                return parseInt(v);
+              });
+              break;
+            case 3:
+              break;
+          }
+
+          switch(+this.__end) {
+            case 0:
+              break;
+            case 1:
+              _rule.until = new Date(this.__end_date);
+              break;
+            case 2:
+              _rule.count = +this.__end_count;
+              break;
+          }
+
+          this.set('rule', new RRule(_rule));
+          var copy = Object.assign({}, this.rule.origOptions);
+          delete copy.dtstart;
+          this.set('value', RRule.optionsToString(copy));
+        }
+
+        this._setHidden();
+      }
+
+      _computeEvent() {
+        var comp=new ICAL.Component('vcalendar');
+        comp.updatePropertyWithValue('prodid', '-//DMARIAA//CALENDAR ELEMENT//EN');
+        comp.updatePropertyWithValue('version', '2.0');
+
+        var event=new ICAL.Event();
+        event.uid=this._uniqueID();
+        event.component.addPropertyWithValue('DTSTAMP', ICAL.Time.fromJSDate(new Date()).toICALString());
+        event.startDate=ICAL.Time.fromDateTimeString(this.__start_date+"T"+this.__start_time);
+        event.endDate=ICAL.Time.fromDateTimeString(this.__start_date+"T"+this.__end_time);
+
+        if(this.__is_recurring) {
+          var rule=new ICAL.Recur();
+          rule.freq=this._recurrencyIdToICAL(+this.__frequency);
+          rule.interval=+this.__interval;
+          rule.wkst=ICAL.Time.MONDAY;
+
+          switch (+this.__frequency) {
+            case 0:
+              rule.bymonth = this.__yearly_months.map(function (v) {
+                return parseInt(v);
+              });
+
+              if (this.__yearly_on) {
+                rule.bysetpos = +this.__yearly_pos;
+                if (this.__yearly_day >= 0) {
+                  rule.byweekday = +this.__yearly_day;
+                } else if (this.__yearly_day == -3) {
+                  rule.byweekday = [0, 1, 2, 3, 4, 5, 6];
+                } else if (this.__yearly_day == -2) {
+                  rule.byweekday = [0, 1, 2, 3, 4, 5];
+                } else if (this.__yearly_day == -1) {
+                  rule.byweekday = [5, 6];
+                }
+              }
+              break;
+            case 1:
+              if (this.__monthly_mode_every) {
+                rule.bymonthday = this.__monthly_days.map(function (v) {
+                  return parseInt(v);
+                });
+              } else {
+                rule.bysetpos = +this.__monthly_pos;
+                if (this.__monthly_day >= 0) {
+                  rule.byweekday = +this.__monthly_day;
+                } else if (this.__monthly_day == -3) {
+                  rule.byweekday = [0, 1, 2, 3, 4, 5, 6];
+                } else if (this.__monthly_day == -2) {
+                  rule.byweekday = [0, 1, 2, 3, 4];
+                } else if (this.__monthly_day == -1) {
+                  rule.setComponent('BYDAY', ['SA', 'SU']);
+                }
+              }
+              break;
+            case 2:
+              rule.setComponent('BYDAY', this.__weekly_days.map(function (v) {
+                return this._weekdayNumberToICAL(+v);
+              }.bind(this)));
+              break;
+            case 3:
+              break;
+          }
+
+          var prop = new ICAL.Property('rrule');
+          prop.setValue(rule);
+          event.component.addProperty(prop);
+        }
+
+        comp.addSubcomponent(event.component);
+        return comp.toString();
+      }
+
+      _uniqueID(){
+        function chr4(){
+          return Math.random().toString(16).slice(-4);
+        }
+        return chr4() + chr4() +
+            '-' + chr4() +
+            '-' + chr4() +
+            '-' + chr4() +
+            '-' + chr4() + chr4() + chr4();
+      }
+
+      _generateEvent() {
+        var event = "";
+      }
+
+      _setHidden() {
+        this.set('__daily_hidden', this.__frequency != 3);
+        this.set('__weekly_hidden', this.__frequency != 2);
+        this.set('__monthly_hidden', this.__frequency != 1);
+        this.set('__yearly_hidden', this.__frequency != 0);
+
+        this.set('__end_date_hidden', this.__end != 1);
+        this.set('__end_count_hidden', this.__end != 2);
+      }
+
+      _computeMonthlyMode(item, mode) {
+        return item==mode;
+      }
+
+      _changeMonthlyMode(event) {
+        var name = event.target.value;
+        var checked = event.target.checked;
+
+        if((!checked && event.target.value == this.__monthly_mode) || checked) {
+          this.set('__monthly_mode_every', name=='every');
+          if(!checked) {
+            event.target.checked = true;
+          }
+        }
+      }
+
+      _pad(num, padlen, padchar) {
+        var pad_char = typeof padchar !== 'undefined' ? padchar : '0';
+        var pad = new Array(1 + padlen).join(pad_char);
+        return (pad + num).slice(-pad.length);
+      }
+
+      // Value related functions
+      _recurrencyIdToICAL(id) {
+        return [ 'YEARLY', 'MONTHLY', 'WEEKLY', 'DAILY' ][id];
+      }
+
+      _weekdayNumberToICAL(id) {
+        return [ 'MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU' ][id];
+      }
+    }
+
+    window.customElements.define(CalendarEvent.is, CalendarEvent);
+  </script>
+</dom-module>

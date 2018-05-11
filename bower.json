@@ -1,0 +1,27 @@
+{
+  "name": "calendar-event",
+  "main": "calendar-event.html",
+  "dependencies": {
+    "polymer": "Polymer/polymer#^2.0.0",
+    "paper-styles": "PolymerElements/paper-styles#^2.1.0",
+    "paper-input": "PolymerElements/paper-input#^2.1.1",
+    "paper-button": "PolymerElements/paper-button#^2.0.0",
+    "paper-item": "PolymerElements/paper-item#^2.1.0",
+    "paper-checkbox": "PolymerElements/paper-checkbox#^2.0.2",
+    "paper-radio-button": "PolymerElements/paper-radio-button#^2.1.0",
+    "paper-listbox": "PolymerElements/paper-listbox#^2.0.0",
+    "paper-input-date": "ssh://bitbucket.org/dmariaa-personal/paper-input-date.git",
+    "paper-dropdown-menu": "PolymerElements/paper-dropdown-menu#^2.0.2",
+    "iron-collapse": "PolymerElements/iron-collapse#^2.2.0",
+    "paper-time-picker": "git@github.com:bendavis78/paper-time-picker.git#^1.2.0",
+    "paper-input-time": "git@github.com:dmariaa/paper-input-time.git"
+  },
+  "devDependencies": {
+    "iron-demo-helpers": "PolymerElements/iron-demo-helpers#^2.0.0",
+    "web-component-tester": "Polymer/web-component-tester#^6.0.0",
+    "webcomponentsjs": "webcomponents/webcomponentsjs#^1.0.0"
+  },
+  "resolutions": {
+    "polymer": "^2.0.0"
+  }
+}

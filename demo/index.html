@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>calendar-event demo</title>
+
+    <script src="../../webcomponentsjs/webcomponents-loader.js"></script>
+
+    <link rel="import" href="../../polymer/lib/elements/dom-bind.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+    <link rel="import" href="../../paper-button/paper-button.html">
+
+    <link rel="import" href="../calendar-event.html">
+    <link rel="import" href="../button-group.html">
+
+    <custom-style>
+      <style is="custom-style" include="demo-pages-shared-styles">
+        button-group {
+          display: flex;
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
+        button-group paper-button {
+          flex-basis: 18%;
+          flex-shrink: 0;
+          margin-bottom: 3px;
+        }
+        button-group paper-button[active] {
+          background-color: #c0c0c0;
+        }
+
+        calendar-event {
+          margin-bottom: 30px;
+        }
+
+        .dates {
+          margin-top: 30px;
+          text-align: right;
+        }
+
+        .dates > div {
+          margin-bottom: 2px;
+        }
+      </style>
+    </custom-style>
+  </head>
+  <body>
+    <dom-bind id="app">
+      <template>
+        <div class="vertical-section-container centered">
+          <h3>Basic button-group demo</h3>
+          <demo-snippet>
+            <button-group id="button_group"
+                          selectable="paper-button">
+              <paper-button toggles value="1">Button 1</paper-button>
+              <paper-button toggles value="2">Button 2</paper-button>
+              <paper-button toggles value="3">Button 3</paper-button>
+              <paper-button toggles value="4">Button 4</paper-button>
+              <paper-button toggles value="5">Button 5</paper-button>
+              <paper-button toggles value="6">Button 6</paper-button>
+              <paper-button toggles value="7">Button 7</paper-button>
+              <paper-button toggles value="8">Button 8</paper-button>
+              <paper-button toggles value="9">Button 9</paper-button>
+              <paper-button toggles value="10">Button 10</paper-button>
+            </button-group>
+          </demo-snippet>
+        </div>
+        <div class="vertical-section-container centered">
+          <h3>Basic calendar-event demo</h3>
+          <demo-snippet>
+            <calendar-event id="calendar" value="{{date_string}}"></calendar-event>
+            <div>RRULE: [[date_string]]</div>
+            <div class="dates">
+              <template is="dom-repeat" items="[[getDates(date_string)]]">
+                <div>[[item]]</div>
+              </template>
+            </div>
+          </demo-snippet>
+        </div>
+      </template>
+    </dom-bind>
+    <script>
+      var app = document.getElementById('app');
+
+      document.addEventListener('WebComponentsReady', function() {
+        app.date_string = "";
+        app.$.button_group.value=[ "3", "7" ];
+      });
+
+      app.getDates = function() {
+        var rule = app.$.calendar.rule;
+        if(rule) {
+          if(!rule.options.count && !rule.options.until) {
+            rule.options.count=10;
+          }
+          return app.$.calendar.rule.all();
+        }
+      };
+    </script>
+  </body>
+</html>

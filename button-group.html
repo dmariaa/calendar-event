@@ -1,0 +1,86 @@
+<link rel="import" href="../polymer/polymer-element.html">
+
+<dom-module id="button-group">
+  <template>
+    <style>
+      :host {
+        display: inline-block;
+      }
+    </style>
+    <slot></slot>
+  </template>
+  <script>
+    class ButtonGroup extends Polymer.Element {
+      static get is() { return 'button-group'; }
+      static get properties() {
+        return {
+          attrForValue: {
+            type: String,
+            value: 'value'
+          },
+          selectedAttribute: {
+            type: String,
+            value: 'active'
+          },
+          selectable: {
+            type: String,
+            notify: true,
+            value: 'paper-button',
+            observer: '_selectableChanged'
+          },
+          value: {
+            type: Array,
+            notify: true,
+            value: [],
+            observer: '_valueChanged'
+          }
+        };
+      }
+
+      ready() {
+        super.ready();
+        this.addEventListener('click', this._handleClick.bind(this));
+      }
+
+      _handleClick(event) {
+        var targetEl = event.target;
+        if(targetEl.matches(this.selectable)) {
+          if(targetEl.hasAttribute(this.selectedAttribute)) {
+            this.push('value', targetEl.getAttribute(this.attrForValue));
+          } else {
+            var index = this.value.indexOf(targetEl.getAttribute(this.attrForValue));
+            if(index !== -1) {
+              this.splice('value', index, 1);
+            }
+          }
+        }
+      }
+
+      _valueChanged(value) {
+        for(var i=0, length=value.length; i<length; ++i) {
+          var item = this._findSelectableByValue(value[i]);
+          if(item) {
+            item.setAttribute(this.selectedAttribute, this.selectedAttribute);
+          }
+        }
+      }
+
+      _selectableChanged(value) {
+        this._selectableNodes = document.querySelectorAll(value);
+      }
+
+      _findSelectableByValue(value) {
+        for(var i=0, length=this._selectableNodes.length; i<length;++i) {
+          var item = this._selectableNodes[i];
+          var itemValue = item.getAttribute(this.attrForValue);
+          if(itemValue && itemValue===value) {
+            return item;
+          }
+        }
+        return false;
+      }
+    }
+
+    window.customElements.define(ButtonGroup.is, ButtonGroup);
+  </script>
+</dom-module>
