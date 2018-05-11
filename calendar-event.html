@@ -601,6 +601,7 @@
         }
 
         this._setHidden();
+        this.dispatchEvent(new CustomEvent('calendar-event-changed'));
       }
 
       _computeEvent() {
