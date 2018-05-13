@@ -428,6 +428,11 @@
             type: Object
           },
 
+          text: {
+            type: String,
+            notify: true
+          },
+
           event: {
             type: String,
             notify: true
@@ -554,6 +559,7 @@
 
       _ruleChanged() {
         this._computeRule();
+        this.set('text', this.toText());
       }
 
       _computeRule() {
@@ -762,6 +768,95 @@
 
       _weekdayNumberToICAL(id) {
         return [ 'MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU' ][id];
+      }
+
+      toText() {
+        var text = "";
+
+        if(this.__start_date == this.__end_date) {
+          text = "El " + this.__start_date + " de " + this.__start_time + " a " + this.__end_time;
+        } else {
+          text = "De las " + this.__start_time + " del " + this.__start_date + " a las " + this.__end_time
+            + " del " + this.__end_date;
+        }
+
+        if(this.rule) {
+          var lang = this._spanish();
+          text += ", repetido " + this.rule.toText(lang.gettext, lang.spanish);
+        }
+
+        return text;
+      }
+
+      _spanish() {
+        var spanish = {
+          dayNames: [
+            'Domingo',
+            'Lunes',
+            'Martes',
+            'Miércoles',
+            'Jueves',
+            'Viernes',
+            'Sábado'
+          ],
+          monthNames: [
+            'Enero',
+            'Febrero',
+            'Marzo',
+            'Abril',
+            'Mayo',
+            'Junio',
+            'Julio',
+            'Agosto',
+            'Septiembre',
+            'Octubre',
+            'Noviembre',
+            'Diciembre'
+          ]
+        };
+
+        var strings = {
+            'every': 'cada',
+            'until': 'hasta',
+            'for': 'por',
+            'times': 'veces',
+            'time': 'vez',
+            '(~ approximate)': '(aproximadamente)',
+            'hours': 'horas',
+            'hour': 'hora',
+            'minutes': 'minutos',
+            'weekdays': 'dias laborables',
+            'weekday': 'dia laborable',
+            'days': 'dias',
+            'day': 'dia',
+            'in': 'en',
+            'weeks': 'semanas',
+            'week': 'semana',
+            'on': 'el',
+            'months': 'meses',
+            'month': 'mes',
+            'years': 'años',
+            'year': 'año',
+            'on the': 'el',
+            'and': 'y',
+            'or': 'o',
+            'the': 'el',
+            'at': 'a las',
+            'last': 'ultimo',
+            'st': '',
+            'nd': '',
+            'rd': '',
+            'th': ''
+          };
+
+        function gettext(id) {
+          return strings[id] || id
+        }
+
+        return {
+          spanish: spanish,
+          gettext: gettext
+        }
       }
     }
 

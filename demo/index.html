@@ -71,8 +71,9 @@
         <div class="vertical-section-container centered">
           <h3>Basic calendar-event demo</h3>
           <demo-snippet>
-            <calendar-event id="calendar" value="{{date_string}}"></calendar-event>
+            <calendar-event id="calendar" value="{{date_string}}" text="{{date_text}}"></calendar-event>
             <div>RRULE: [[date_string]]</div>
+            <div>TEXT: [[date_text]]</div>
             <div class="dates">
               <template is="dom-repeat" items="[[getDates(date_string)]]">
                 <div>[[item]]</div>
