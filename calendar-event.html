@@ -77,7 +77,23 @@
       }
 
       .dates-row {
-        justify-content: flex-start;
+        align-items: flex-end;
+      }
+
+      .dates-row > span {
+        line-height: 45px;
+      }
+
+      .event-date.end-date {
+        --paper-input-container-underline-disabled: {
+          border-bottom: 1px dashed;
+          border-color: var(--paper-input-container-color, var(--secondary-text-color));
+        };
+      }
+
+      .event-date.end-date[disabled] {
+        pointer-events: none;
+        opacity: 0.33;
       }
 
       .is-recurring .every {
@@ -182,13 +198,16 @@
     </div>
 
     <!-- Start date and times block -->
-    <div class="form-row form-row-justify-left">
-        <paper-input-date value="{{__start_date}}" label="Desde *" class="event-date" required
-                          error-message="Campo obligatorio"></paper-input-date>
-        <paper-input-time id="start_time" value="{{__start_time}}" label="Inicio" class="event-time"
-                     disabled$="[[__all_day]]" always-float-label></paper-input-time>
-        <paper-input-time value="{{__end_time}}" label="Fin" class="event-time"
-                     disabled$="[[__all_day]]" always-float-label></paper-input-time>
+    <div class="form-row form-row-justify-left dates-row">
+      <paper-input-date value="{{__start_date}}" label="Desde *" class="event-date" required
+                        error-message="Campo obligatorio"></paper-input-date>
+      <paper-input-time id="start_time" value="{{__start_time}}" label="Inicio" class="event-time"
+                   disabled$="[[__all_day]]" always-float-label></paper-input-time>
+      <span> a </span>
+      <paper-input-time value="{{__end_time}}" label="Fin" class="event-time"
+                   disabled$="[[__all_day]]" always-float-label></paper-input-time>
+      <paper-input-date value="{{__end_date}}" label="Hasta *" class="event-date end-date" required
+                        error-message="Campo obligatorio" disabled$="[[__all_day]]"></paper-input-date>
     </div>
     <div class="form-row">
       <paper-checkbox checked="{{__all_day}}">Todo el dia</paper-checkbox>
@@ -362,13 +381,13 @@
               <paper-item value="2">Despues de</paper-item>
             </paper-listbox>
           </paper-dropdown-menu>
-          <paper-input-date value="{{__end_date}}"
+          <paper-input-date value="{{__finish_date}}"
                             label="Dia *"
                             class="event-date"
                             required="[[!__ending_date_hidden]]"
                             auto-validate
                             error-message="Campo obligatorio"
-                            hidden="[[__end_date_hidden]]"></paper-input-date>
+                            hidden="[[__finish_date_hidden]]"></paper-input-date>
           <paper-input id="end_count"
                        value="{{__end_count}}"
                        label="Ocurrencias"
@@ -425,6 +444,14 @@
               return d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2)
             }
           },
+          __end_date: {
+            type: String,
+            notify: true,
+            value: function() {
+              var d = new Date();
+              return d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2)
+            }
+          },
           __start_time: {
             type: String,
             notify: true,
@@ -437,6 +464,11 @@
           __end_time: {
             type: String,
             notify: true,
+            value: function() {
+              var d = new Date();
+              var s = this._pad(d.getHours(),2)+":"+this._pad(d.getMinutes(),2)+":"+this._pad(d.getSeconds(),2);
+              return s;
+            }
           },
           __all_day: {
             type: Boolean
@@ -489,7 +521,7 @@
           __end: {
             type: Number
           },
-          __end_date: {
+          __finish_date: {
             type: String,
             value: function() {
               var d = new Date();
@@ -507,7 +539,7 @@
         return [
           '_ruleChanged(__name,__start_date,__start_time,__end_time,__all_day,__is_recurring,__frequency,__interval,' +
             '__weekly_days.splices, __monthly_mode_every, __monthly_days.splices, __monthly_pos, __monthly_day,' +
-            '__yearly_months.splices, __yearly_on, __yearly_pos, __yearly_day, __end, __end_date, __end_count)'
+            '__yearly_months.splices, __yearly_on, __yearly_pos, __yearly_day, __end, __finish_date, __end_count)'
         ];
       }
 
@@ -587,7 +619,7 @@
             case 0:
               break;
             case 1:
-              _rule.until = new Date(this.__end_date);
+              _rule.until = new Date(this.__finish_date);
               break;
             case 2:
               _rule.count = +this.__end_count;
@@ -697,7 +729,7 @@
         this.set('__monthly_hidden', this.__frequency != 1);
         this.set('__yearly_hidden', this.__frequency != 0);
 
-        this.set('__end_date_hidden', this.__end != 1);
+        this.set('__finish_date_hidden', this.__end != 1);
         this.set('__end_count_hidden', this.__end != 2);
       }
 
