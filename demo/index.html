@@ -68,14 +68,28 @@
             </button-group>
           </demo-snippet>
         </div>
+
         <div class="vertical-section-container centered">
           <h3>Basic calendar-event demo</h3>
           <demo-snippet>
-            <calendar-event id="calendar" value="{{date_string}}" text="{{date_text}}"></calendar-event>
+            <calendar-event id="calendar" value="{{date_string}}"></calendar-event>
             <div>RRULE: [[date_string]]</div>
-            <div>TEXT: [[date_text]]</div>
             <div class="dates">
               <template is="dom-repeat" items="[[getDates(date_string)]]">
+                <div>[[item]]</div>
+              </template>
+            </div>
+          </demo-snippet>
+        </div>
+
+        <div class="vertical-section-container centered">
+          <h3>Basic calendar-event demo</h3>
+          <demo-snippet>
+            <calendar-event id="calendar2"
+                            value="{{date_string2}}" name-field-hidden></calendar-event>
+            <div>RRULE: [[date_string2]]</div>
+            <div class="dates">
+              <template is="dom-repeat" items="[[getDates(date_string2)]]">
                 <div>[[item]]</div>
               </template>
             </div>
@@ -84,22 +98,36 @@
       </template>
     </dom-bind>
     <script>
-      var app = document.getElementById('app');
-
-      document.addEventListener('WebComponentsReady', function() {
-        app.date_string = "";
-        app.$.button_group.value=[ "3", "7" ];
-      });
-
-      app.getDates = function() {
-        var rule = app.$.calendar.rule;
-        if(rule) {
-          if(!rule.options.count && !rule.options.until) {
-            rule.options.count=10;
+      (function(app) {
+        app.getDates = function() {
+          var rule = app.$.calendar._rrule;
+          if(rule) {
+            if(!rule.options.count && !rule.options.until) {
+              rule.options.count=10;
+            }
+            return rule.all();
           }
-          return app.$.calendar.rule.all();
-        }
-      };
+        };
+
+        document.addEventListener('WebComponentsReady', function() {
+          app.$.button_group.value=[ 3, "7", "8" ];
+
+          app.$.calendar2.start_date='2017-01-01';
+          app.$.calendar2.start_time='00:00:00';
+          app.$.calendar2.end_time='23:59:59';
+          app.$.calendar2.end_date='2017-01-01';
+          app.$.calendar2.all_day=true;
+          app.$.calendar2.is_recurring=true;
+          //app.$.calendar2.value="INTERVAL=1;FREQ=WEEKLY;BYDAY=MO,WE,TU,FR";
+          //app.$.calendar2.value="INTERVAL=1;FREQ=DAILY;UNTIL=20180518T000000Z";
+          //app.$.calendar2.value="INTERVAL=1;FREQ=DAILY;COUNT=10";
+          //app.$.calendar2.value="INTERVAL=1;FREQ=MONTHLY;BYMONTHDAY=1,8,15,22,29";
+          //app.$.calendar2.value="INTERVAL=1;FREQ=YEARLY;BYMONTH=1,8,3,10,5,12";
+          //app.$.calendar2.value="FREQ=MONTHLY;BYSETPOS=2;BYDAY=WE";
+          //app.$.calendar2.value="FREQ=MONTHLY;INTERVAL=1;BYSETPOS=1;BYDAY=MO,TU,WE,TH,FR";
+          app.$.calendar2.value="FREQ=YEARLY;INTERVAL=1;BYSETPOS=5;BYDAY=SA,SU";
+        });
+      })(document.getElementById('app'));
     </script>
   </body>
 </html>

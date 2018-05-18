@@ -14,7 +14,8 @@
     "paper-dropdown-menu": "PolymerElements/paper-dropdown-menu#^2.0.2",
     "iron-collapse": "PolymerElements/iron-collapse#^2.2.0",
     "paper-time-picker": "git@github.com:bendavis78/paper-time-picker.git#^1.2.0",
-    "paper-input-time": "git@github.com:dmariaa/paper-input-time.git"
+    "paper-input-time": "git@github.com:dmariaa/paper-input-time.git",
+    "paper-radio-group": "PolymerElements/paper-radio-group#^2.2.0"
   },
   "devDependencies": {
     "iron-demo-helpers": "PolymerElements/iron-demo-helpers#^2.0.0",

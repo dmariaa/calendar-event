@@ -7,6 +7,7 @@
 <link rel="import" href="../paper-button/paper-button.html">
 <link rel="import" href="../paper-input-date/paper-input-date.html">
 <link rel="import" href="../paper-radio-button/paper-radio-button.html">
+<link rel="import" href="../paper-radio-group/paper-radio-group.html">
 <link rel="import" href="../paper-dropdown-menu/paper-dropdown-menu.html">
 <link rel="import" href="../iron-collapse/iron-collapse.html">
 
@@ -192,48 +193,52 @@
     </style>
 
     <!-- Name block -->
+    <template is="dom-if" if="[[!nameFieldHidden]]">
     <div class="form-row">
-      <paper-input value="{{__name}}" label="Nombre *" class="event-name" required
+      <paper-input value="{{name}}" label="Nombre *" class="event-name" required="[[nameFieldRequired]]"
                    error-message="Campo obligatorio"></paper-input>
     </div>
+    </template>
 
     <!-- Start date and times block -->
     <div class="form-row form-row-justify-left dates-row">
-      <paper-input-date value="{{__start_date}}" label="Desde *" class="event-date" required
+      <paper-input-date value="{{start_date}}" label="Desde *" class="event-date" required
                         error-message="Campo obligatorio"></paper-input-date>
-      <paper-input-time id="start_time" value="{{__start_time}}" label="Inicio" class="event-time"
-                   disabled$="[[__all_day]]" always-float-label></paper-input-time>
+      <paper-input-time id="start_time" value="{{start_time}}" label="Inicio" class="event-time"
+                   disabled$="[[all_day]]" always-float-label></paper-input-time>
       <span> a </span>
-      <paper-input-time value="{{__end_time}}" label="Fin" class="event-time"
-                   disabled$="[[__all_day]]" always-float-label></paper-input-time>
-      <paper-input-date value="{{__end_date}}" label="Hasta *" class="event-date end-date" required
-                        error-message="Campo obligatorio" disabled$="[[__all_day]]"></paper-input-date>
+      <paper-input-time value="{{end_time}}" label="Fin" class="event-time"
+                   disabled$="[[all_day]]" always-float-label></paper-input-time>
+      <paper-input-date value="{{end_date}}" label="Hasta *" class="event-date end-date" required
+                        error-message="Campo obligatorio" disabled$="[[all_day]]"></paper-input-date>
     </div>
     <div class="form-row">
-      <paper-checkbox checked="{{__all_day}}">Todo el dia</paper-checkbox>
+      <paper-checkbox checked="{{all_day}}">Todo el dia</paper-checkbox>
     </div>
 
     <!-- Is recurring block -->
     <div class="form-row form-row-justify-left is-recurring">
-      <paper-checkbox checked="{{__is_recurring}}">Repetir</paper-checkbox>
-      <paper-input value="{{__interval}}" label="Cada" class="every"
-                   hidden="[[!__is_recurring]]"></paper-input>
-      <paper-dropdown-menu label="Frecuencia" hidden="[[!__is_recurring]]" class="frequency">
+      <paper-checkbox checked="{{is_recurring}}">Repetir</paper-checkbox>
+      <paper-input value="{{rule.interval}}" label="Cada" class="every"
+                   hidden="[[!is_recurring]]"></paper-input>
+      <paper-dropdown-menu label="Frecuencia" hidden="[[!is_recurring]]" class="frequency">
         <paper-listbox
                 attr-for-selected="value"
                 slot="dropdown-content"
-                selected="{{__frequency}}" fallback-selection="0">
-          <paper-item value="3">Día</paper-item>
-          <paper-item value="2">Semana</paper-item>
-          <paper-item value="1">Mes</paper-item>
-          <paper-item value="0">Año</paper-item>
+                selected="{{rule.freq}}"
+                on-selected-changed="_changeRecurrencyMode"
+                fallback-selection="[[RRule.DAILY]]">
+          <paper-item value$="[[RRule.DAILY]]">Día</paper-item>
+          <paper-item value$="[[RRule.WEEKLY]]">Semana</paper-item>
+          <paper-item value$="[[RRule.MONTHLY]]">Mes</paper-item>
+          <paper-item value$="[[RRule.YEARLY]]">Año</paper-item>
         </paper-listbox>
       </paper-dropdown-menu>
     </div>
 
     <!-- Is recurring options block -->
     <div class="form-row recurring-options">
-      <iron-collapse opened$="[[__is_recurring]]">
+      <iron-collapse opened$="[[is_recurring]]">
 
         <!-- Is recurring daily block -->
         <div class="form-row" hidden="[[__daily_hidden]]"></div>
@@ -241,7 +246,7 @@
         <!-- Is recurring weekly block -->
         <div class="form-row form-row-justify-left weekly-event" hidden="[[__weekly_hidden]]">
           <span>El:</span>
-          <button-group value="{{__weekly_days}}">
+          <button-group value="{{rule.byweekday}}">
             <paper-button class="rounded-button" toggles value="0">L</paper-button>
             <paper-button class="rounded-button" toggles value="1">M</paper-button>
             <paper-button class="rounded-button" toggles value="2">X</paper-button>
@@ -253,69 +258,96 @@
         </div>
 
         <!-- Is recurring monthly block -->
-        <div class="form-column" hidden="[[__monthly_hidden]]">
+        <paper-radio-group id="radio_group"
+                           selected="{{__monthly_mode}}"
+                           on-iron-items-changed="_radioGroupItemsChanged">
+          <div class="form-column" hidden="[[__monthly_hidden]]">
 
-          <div class="form-row form-row-justify-left monthly-event">
-            <paper-radio-button id="monthly_every"
-                                value="every"
-                                class="form-align-top monthly-event-select"
-                                on-iron-change="_changeMonthlyMode"
-                                checked="[[__monthly_mode_every]]">Cada</paper-radio-button>
-              <button-group value="{{__monthly_days}}" class="monthly-event-buttons" disabled$="[[!__monthly_mode_every]]">
-                <template is="dom-repeat" items="[[__monthDays]]">
-                  <div><paper-button toggles value$="{{item}}" class="rounded-button">[[item]]</paper-button></div>
-                </template>
+            <div class="form-row form-row-justify-left monthly-event">
+              <paper-radio-button name="every" class="form-align-top monthly-event-select">Cada</paper-radio-button>
+              <button-group value="{{rule.bymonthday}}"
+                            class="monthly-event-buttons"
+                            disabled$="[[_disableMonthlyMode(__monthly_mode, 'every')]]">
+                <div><paper-button toggles value="1" class="rounded-button">1</paper-button></div>
+                <div><paper-button toggles value="2" class="rounded-button">2</paper-button></div>
+                <div><paper-button toggles value="3" class="rounded-button">3</paper-button></div>
+                <div><paper-button toggles value="4" class="rounded-button">4</paper-button></div>
+                <div><paper-button toggles value="5" class="rounded-button">5</paper-button></div>
+                <div><paper-button toggles value="6" class="rounded-button">6</paper-button></div>
+                <div><paper-button toggles value="7" class="rounded-button">7</paper-button></div>
+                <div><paper-button toggles value="8" class="rounded-button">8</paper-button></div>
+                <div><paper-button toggles value="9" class="rounded-button">9</paper-button></div>
+                <div><paper-button toggles value="10" class="rounded-button">10</paper-button></div>
+                <div><paper-button toggles value="11" class="rounded-button">11</paper-button></div>
+                <div><paper-button toggles value="12" class="rounded-button">12</paper-button></div>
+                <div><paper-button toggles value="13" class="rounded-button">13</paper-button></div>
+                <div><paper-button toggles value="14" class="rounded-button">14</paper-button></div>
+                <div><paper-button toggles value="15" class="rounded-button">15</paper-button></div>
+                <div><paper-button toggles value="16" class="rounded-button">16</paper-button></div>
+                <div><paper-button toggles value="17" class="rounded-button">17</paper-button></div>
+                <div><paper-button toggles value="18" class="rounded-button">18</paper-button></div>
+                <div><paper-button toggles value="19" class="rounded-button">19</paper-button></div>
+                <div><paper-button toggles value="20" class="rounded-button">20</paper-button></div>
+                <div><paper-button toggles value="21" class="rounded-button">21</paper-button></div>
+                <div><paper-button toggles value="22" class="rounded-button">22</paper-button></div>
+                <div><paper-button toggles value="23" class="rounded-button">23</paper-button></div>
+                <div><paper-button toggles value="24" class="rounded-button">24</paper-button></div>
+                <div><paper-button toggles value="25" class="rounded-button">25</paper-button></div>
+                <div><paper-button toggles value="26" class="rounded-button">26</paper-button></div>
+                <div><paper-button toggles value="27" class="rounded-button">27</paper-button></div>
+                <div><paper-button toggles value="28" class="rounded-button">28</paper-button></div>
+                <div><paper-button toggles value="29" class="rounded-button">29</paper-button></div>
+                <div><paper-button toggles value="30" class="rounded-button">30</paper-button></div>
+                <div><paper-button toggles value="31" class="rounded-button">31</paper-button></div>
               </button-group>
-          </div>
+            </div>
 
-          <div class="monthly-event form-row-justify-left form-row">
-            <paper-radio-button value="on"
-                                class="form-align-top monthly-event-select"
-                                on-iron-change="_changeMonthlyMode"
-                                checked="[[!__monthly_mode_every]]">El</paper-radio-button>
-            <div class="form-row">
-              <paper-dropdown-menu label="Cada" disabled="[[__monthly_mode_every]]">
-                <paper-listbox slot="dropdown-content"
-                               attr-for-selected="value"
-                               selected="{{__monthly_pos}}"
-                               fallback-selection="1">
-                  <paper-item value="1">Primer</paper-item>
-                  <paper-item value="2">Segundo</paper-item>
-                  <paper-item value="3">Tercer</paper-item>
-                  <paper-item value="4">Cuarto</paper-item>
-                  <paper-item value="5">Quinto</paper-item>
-                  <div class="divider"></div>
-                  <paper-item value="-1">Último</paper-item>
-                </paper-listbox>
-              </paper-dropdown-menu>
-              <paper-dropdown-menu label="Día"  disabled="[[__monthly_mode_every]]">
-                <paper-listbox
-                    slot="dropdown-content"
-                    attr-for-selected="value"
-                    selected="{{__monthly_day}}"
-                    fallback-selection="0">
-                  <paper-item value="0">Lunes</paper-item>
-                  <paper-item value="1">Martes</paper-item>
-                  <paper-item value="2">Miércoles</paper-item>
-                  <paper-item value="3">Jueves</paper-item>
-                  <paper-item value="4">Viernes</paper-item>
-                  <paper-item value="5">Sabado</paper-item>
-                  <paper-item value="6">Domingo</paper-item>
-                  <div class="divider"></div>
-                  <paper-item value="-3">Día</paper-item>
-                  <paper-item value="-2">Día de la semana</paper-item>
-                  <paper-item value="-1">Día del fin de semana</paper-item>
-                </paper-listbox>
-              </paper-dropdown-menu>
+            <div class="monthly-event form-row-justify-left form-row">
+              <paper-radio-button name="on" class="form-align-top monthly-event-select">El</paper-radio-button>
+              <div class="form-row">
+                <paper-dropdown-menu label="Cada" disabled="[[_disableMonthlyMode(__monthly_mode, 'on')]]">
+                  <paper-listbox slot="dropdown-content"
+                                 attr-for-selected="value"
+                                 selected="{{__monthly_pos}}"
+                                 fallback-selection="1">
+                    <paper-item value="1">Primer</paper-item>
+                    <paper-item value="2">Segundo</paper-item>
+                    <paper-item value="3">Tercer</paper-item>
+                    <paper-item value="4">Cuarto</paper-item>
+                    <paper-item value="5">Quinto</paper-item>
+                    <div class="divider"></div>
+                    <paper-item value="-1">Último</paper-item>
+                  </paper-listbox>
+                </paper-dropdown-menu>
+                <paper-dropdown-menu label="Día"  disabled="[[_disableMonthlyMode(__monthly_mode, 'on')]]">
+                  <paper-listbox
+                      slot="dropdown-content"
+                      attr-for-selected="value"
+                      selected="{{__monthly_day}}"
+                      fallback-selection="0">
+                    <paper-item value="0">Lunes</paper-item>
+                    <paper-item value="1">Martes</paper-item>
+                    <paper-item value="2">Miércoles</paper-item>
+                    <paper-item value="3">Jueves</paper-item>
+                    <paper-item value="4">Viernes</paper-item>
+                    <paper-item value="5">Sabado</paper-item>
+                    <paper-item value="6">Domingo</paper-item>
+                    <div class="divider"></div>
+                    <paper-item value="-3">Día</paper-item>
+                    <paper-item value="-2">Día de la semana</paper-item>
+                    <paper-item value="-1">Día del fin de semana</paper-item>
+                  </paper-listbox>
+                </paper-dropdown-menu>
+              </div>
             </div>
           </div>
-        </div>
+        </paper-radio-group>
 
         <!-- Is recurring yearly block -->
         <div class="form-column form-row-justify-left" hidden="[[__yearly_hidden]]">
           <div class="form-row form-row-justify-left">
             <div class="form-align-top">En</div>
-            <button-group class="yearly-event-buttons form-row-justify-left" value="{{__yearly_months}}">
+            <button-group class="yearly-event-buttons form-row-justify-left" value="{{rule.bymonth}}">
               <div><paper-button class="rounded-button" toggles value="1">Ene.</paper-button></div>
               <div><paper-button class="rounded-button" toggles value="2">Feb.</paper-button></div>
               <div><paper-button class="rounded-button" toggles value="3">Mar.</paper-button></div>
@@ -372,16 +404,18 @@
         <!-- Is recurring ending block -->
         <div class="ending form-row-justify-left form-row">
           <paper-dropdown-menu label="Termina">
-            <paper-listbox slot="dropdown-content"
+            <paper-listbox id="ending_mode"
+                           slot="dropdown-content"
                            attr-for-selected="value"
-                           selected="{{__end}}"
-                           fallback-selection="0">
+                           on-selected-changed="_changeEndMode"
+                           fallback-selection="0"
+                           selected="{{ending_mode}}">
               <paper-item value="0">Nunca</paper-item>
               <paper-item value="1">El</paper-item>
               <paper-item value="2">Despues de</paper-item>
             </paper-listbox>
           </paper-dropdown-menu>
-          <paper-input-date value="{{__finish_date}}"
+          <paper-input-date value="{{rule.until}}"
                             label="Dia *"
                             class="event-date"
                             required="[[!__ending_date_hidden]]"
@@ -389,7 +423,7 @@
                             error-message="Campo obligatorio"
                             hidden="[[__finish_date_hidden]]"></paper-input-date>
           <paper-input id="end_count"
-                       value="{{__end_count}}"
+                       value="{{rule.count}}"
                        label="Ocurrencias"
                        always-float-label
                        allowed-pattern="[0-9]"
@@ -421,11 +455,32 @@
         return {
           value: {
             type: String,
-            notify: true
+            notify: true,
+            observer: '_valueChanged'
           },
 
           rule: {
-            type: Object
+            type: Object,
+            notify: true,
+            value:  function() {
+              var r = {};
+              var d = new Date();
+              r.dtstart = d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2);
+              r.interval = 1;
+              r.freq = RRule.DAILY;
+              r.byweekday = [];
+              r.bymonthday = [];
+              r.bymonth = [];
+              return r;
+            }
+          },
+
+          RRule: {
+            type: Function,
+            readOnly: true,
+            value: function() {
+              return window.RRule
+            }
           },
 
           text: {
@@ -433,326 +488,355 @@
             notify: true
           },
 
-          event: {
+          /**
+           * Event name
+           */
+          name: {
             type: String,
             notify: true
           },
 
-          __name: {
-            type: String
-          },
-          __start_date: {
-            type: String,
-            notify: true,
-            value: function() {
-              var d = new Date();
-              return d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2)
-            }
-          },
-          __end_date: {
-            type: String,
-            notify: true,
-            value: function() {
-              var d = new Date();
-              return d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2)
-            }
-          },
-          __start_time: {
-            type: String,
-            notify: true,
-            value: function() {
-              var d = new Date();
-              var s = this._pad(d.getHours(),2)+":"+this._pad(d.getMinutes(),2)+":"+this._pad(d.getSeconds(),2);
-              return s;
-            }
-          },
-          __end_time: {
-            type: String,
-            notify: true,
-            value: function() {
-              var d = new Date();
-              var s = this._pad(d.getHours(),2)+":"+this._pad(d.getMinutes(),2)+":"+this._pad(d.getSeconds(),2);
-              return s;
-            }
-          },
-          __all_day: {
-            type: Boolean
-          },
-          __is_recurring: {
-            type: Boolean
-          },
-          __frequency: {
-            type: Number,
-            value: 3
-          },
-          __interval: {
-            type: Number,
-            value: 1
+          /**
+           * Hide the name field
+           */
+          nameFieldHidden: {
+            type: Boolean,
+            value: false
           },
 
-          __weekly_days: {
-            type: Array,
-            value: function() { return new Array(); }
-          },
-
-          __monthly_mode_every: {
+          /**
+           * Is name field required
+           */
+          nameFieldRequired: {
             type: Boolean,
             value: true
           },
-          __monthly_days: {
-            type: Array
+
+          /**
+           * Event start date
+           */
+          start_date: {
+            type: String,
+            notify: true,
+            value: function() {
+              var d = new Date();
+              return d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2);
+            }
           },
+
+          /**
+           * Event end date
+           */
+          end_date: {
+            type: String,
+            notify: true,
+            value: function() {
+              var d = new Date();
+              return d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2);
+            }
+          },
+
+          /**
+           * Event start time
+           */
+          start_time: {
+            type: String,
+            notify: true,
+            value: function() {
+              var d = new Date();
+              var s = this._pad(d.getHours(),2)+":"+this._pad(d.getMinutes(),2)+":"+this._pad(d.getSeconds(),2);
+              return s;
+            }
+          },
+
+          /**
+           * Event end time
+           */
+          end_time: {
+            type: String,
+            notify: true,
+            value: function() {
+              var d = new Date();
+              var s = this._pad(d.getHours(),2)+":"+this._pad(d.getMinutes(),2)+":"+this._pad(d.getSeconds(),2);
+              return s;
+            }
+          },
+
+          /**
+           * Is all day event
+           */
+          all_day: {
+            type: Boolean
+          },
+
+          /**
+           * Is recurring event
+           */
+          is_recurring: {
+            type: Boolean
+          },
+
+          __monthly_mode: {
+            type: String
+          },
+
           __monthly_pos: {
             type: Number
           },
+
           __monthly_day: {
             type: Number
           },
 
-          __yearly_months: {
-            type: Array,
-            value: function() { return new Array(); }
-          },
           __yearly_on: {
             type: Boolean
           },
+
           __yearly_pos: {
             type: Number
           },
+
           __yearly_day: {
             type: Number
           },
-
-          __end: {
-            type: Number
-          },
-          __finish_date: {
-            type: String,
-            value: function() {
-              var d = new Date();
-              return d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2)
-            }
-          },
-          __end_count: {
-            type: Number,
-            value: 1
-          }
         };
-      }
-
-      static get observers() {
-        return [
-          '_ruleChanged(__name,__start_date,__start_time,__end_time,__all_day,__is_recurring,__frequency,__interval,' +
-            '__weekly_days.splices, __monthly_mode_every, __monthly_days.splices, __monthly_pos, __monthly_day,' +
-            '__yearly_months.splices, __yearly_on, __yearly_pos, __yearly_day, __end, __finish_date, __end_count)'
-        ];
       }
 
       constructor() {
         super();
-        this.rule="";
-        this.__monthDays = [];
-        for (var i = 1; i <= 31; i++) {
-          this.__monthDays.push(i);
+        this.__daily_hidden=false;
+        this.__weekly_hidden=true;
+        this.__monthly_hidden=true;
+        this.__yearly_hidden=true;
+      }
+
+      ready() {
+        super.ready();
+        this._createMethodObserver('_ruleChanged(rule.*, start_date, is_recurring, __monthly_mode, __yearly_on, __monthly_pos, __monthly_day, __yearly_pos, __yearly_day)');
+        this.__internalChange = false;
+      }
+
+      _radioGroupItemsChanged() {
+        var items = Polymer.dom(this.root).querySelectorAll('paper-radio-button');
+        var arr = Array.prototype.slice.call(items);
+        this.$.radio_group._setItems(arr);
+        this.set('__monthly_mode', 'every');
+      }
+
+      _valueChanged(newValue, oldValue) {
+        if(!newValue) return;
+
+        if(this.__internalChange) {
+          this.__internalChange=false;
+          return;
         }
+        this._parseValue(newValue);
+      }
+
+      _parseValue(value) {
+        //console.log("Parsing value: " + value);
+        var r = RRule.fromString(value);
+        var ops = this._parseOptionsRule(r.options);
+        //console.log("Setting rule to: " + JSON.stringify(ops));
+        this.set('rule', ops);
+        this._showRecurrencyMode(r.options.freq);
+      }
+
+      _parseOptionsRule(options) {
+        var ops = new Object();
+        ops.freq = options.freq;
+        ops.interval = options.interval;
+        ops.byweekday = options.byweekday;
+        ops.bymonthday = options.bymonthday;
+        ops.bymonth = options.bymonth;
+
+        if(options.bysetpos && options.bysetpos.length > 0) {
+          if(options.freq==1) {
+            this.__monthly_pos = options.bysetpos[0];
+            this.__monthly_mode = "on";
+
+            switch (options.byweekday.length) {
+              case 1:
+                this.__monthly_day = options.byweekday[0];
+                break;
+              case 7:
+                this.__monthly_day = -3;
+                break;
+              case 5:
+                this.__monthly_day = -2;
+                break;
+              case 2:
+                this.__monthly_day = -1;
+                break;
+            }
+          } else if(options.freq==0) {
+            this.__yearly_pos = options.bysetpos[0];
+            this.__yearly_on = true;
+
+            switch (options.byweekday.length) {
+              case 1:
+                this.__yearly_day = options.byweekday[0];
+                break;
+              case 7:
+                this.__yearly_day = -3;
+                break;
+              case 5:
+                this.__yearly_day = -2;
+                break;
+              case 2:
+                this.__yearly_day = -1;
+                break;
+            }
+          }
+        }
+
+        if(options.until) {
+          ops.until = this._dateToString(options.until);
+          app.$.calendar2.$.ending_mode.select("1");
+        }
+
+        if(options.count) {
+          ops.count = options.count;
+          app.$.calendar2.$.ending_mode.select("2");
+        }
+        return ops;
+      }
+
+      _dateToString(date) {
+        var d = new Date(date);
+        var s = d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2);
+        return s;
       }
 
       _ruleChanged() {
-        this._computeRule();
-        this.set('text', this.toText());
-      }
-
-      _computeRule() {
-        var _rule = {};
-
-        if(this.__all_day) {
-          this.__start_time="00:00:00";
-          this.__end_time="23:59:59";
+        if(!this.is_recurring) {
+          this.__internalChange = true;
+          this.set('value', undefined);
+          return;
         }
 
-        if(this.__is_recurring) {
-          _rule.dtstart = new Date(this.__start_date);
-          _rule.freq = +this.__frequency;
-          _rule.interval = +this.__interval;
+        this.rule.dtstart = this.start_date;
+        this.rule.interval = +this.rule.interval;
+        this.rule.freq = +this.rule.freq;
 
-          switch (+this.__frequency) {
-            case 0:
-              _rule.bymonth = this.__yearly_months.map(function (v) {
-                return parseInt(v);
-              });
+        var r = this._parseRuleOptions(JSON.parse(JSON.stringify(this.rule)));
+        if(this._rrule) {
+          if(this._rrule.origOptions==r) return;
+        }
 
-              if (this.__yearly_on) {
-                _rule.bysetpos = +this.__yearly_pos;
-                if (this.__yearly_day >= 0) {
-                  _rule.byweekday = +this.__yearly_day;
-                } else if (this.__yearly_day == -3) {
-                  _rule.byweekday = [0, 1, 2, 3, 4, 5, 6];
-                } else if (this.__yearly_day == -2) {
-                  _rule.byweekday = [0, 1, 2, 3, 4, 5];
-                } else if (this.__yearly_day == -1) {
-                  _rule.byweekday = [5, 6];
-                }
-              }
-              break;
-            case 1:
-              if (this.__monthly_mode_every) {
-                _rule.bymonthday = this.__monthly_days.map(function (v) {
-                  return parseInt(v);
-                });
-              } else {
-                _rule.bysetpos = +this.__monthly_pos;
-                if (this.__monthly_day >= 0) {
-                  _rule.byweekday = +this.__monthly_day;
-                } else if (this.__monthly_day == -3) {
-                  _rule.byweekday = [0, 1, 2, 3, 4, 5, 6];
-                } else if (this.__monthly_day == -2) {
-                  _rule.byweekday = [0, 1, 2, 3, 4];
-                } else if (this.__monthly_day == -1) {
-                  _rule.byweekday = [5, 6];
-                }
-              }
-              break;
-            case 2:
-              _rule.byweekday = this.__weekly_days.map(function (v) {
-                return parseInt(v);
-              });
-              break;
-            case 3:
-              break;
-          }
-
-          switch(+this.__end) {
-            case 0:
-              break;
-            case 1:
-              _rule.until = new Date(this.__finish_date);
-              break;
-            case 2:
-              _rule.count = +this.__end_count;
-              break;
-          }
-
-          this.set('rule', new RRule(_rule));
-          var copy = Object.assign({}, this.rule.origOptions);
+        try {
+          this._rrule = new RRule(r);
+          var copy = Object.assign({}, this._rrule.origOptions);
           delete copy.dtstart;
-          this.set('value', RRule.optionsToString(copy));
+
+          var v = RRule.optionsToString(copy);
+          if(this.value == v) return;
+
+          this.__internalChange = true;
+          this.value = v;
+          this.text = this.toText();
+          //console.log(this.value);
+        } catch(e) {
+          console.error(e);
         }
-
-        this._setHidden();
-        this.dispatchEvent(new CustomEvent('calendar-event-changed'));
       }
 
-      _computeEvent() {
-        var comp=new ICAL.Component('vcalendar');
-        comp.updatePropertyWithValue('prodid', '-//DMARIAA//CALENDAR ELEMENT//EN');
-        comp.updatePropertyWithValue('version', '2.0');
+      _parseRuleOptions(value) {
+        value.dtstart = new Date(value.dtstart);
+        value.byweekday = this._arrayToNum(value.byweekday || []);
+        value.bymonthday = this._arrayToNum(value.bymonthday || []);
+        value.bymonth = this._arrayToNum(value.bymonth || []);
 
-        var event=new ICAL.Event();
-        event.uid=this._uniqueID();
-        event.component.addPropertyWithValue('DTSTAMP', ICAL.Time.fromJSDate(new Date()).toICALString());
-        event.startDate=ICAL.Time.fromDateTimeString(this.__start_date+"T"+this.__start_time);
-        event.endDate=ICAL.Time.fromDateTimeString(this.__start_date+"T"+this.__end_time);
+        if(value.freq != 2) delete value.byweekday;
+        if(value.freq != 1) delete value.bymonthday;
+        if(value.freq != 0) delete value.bymonth;
 
-        if(this.__is_recurring) {
-          var rule=new ICAL.Recur();
-          rule.freq=this._recurrencyIdToICAL(+this.__frequency);
-          rule.interval=+this.__interval;
-          rule.wkst=ICAL.Time.MONDAY;
+        if(value.freq==1) {
+          if(this.__monthly_mode=='on') {
+            delete value.bymonthday;
+            value.bysetpos = +this.__monthly_pos;
 
-          switch (+this.__frequency) {
-            case 0:
-              rule.bymonth = this.__yearly_months.map(function (v) {
-                return parseInt(v);
-              });
-
-              if (this.__yearly_on) {
-                rule.bysetpos = +this.__yearly_pos;
-                if (this.__yearly_day >= 0) {
-                  rule.byweekday = +this.__yearly_day;
-                } else if (this.__yearly_day == -3) {
-                  rule.byweekday = [0, 1, 2, 3, 4, 5, 6];
-                } else if (this.__yearly_day == -2) {
-                  rule.byweekday = [0, 1, 2, 3, 4, 5];
-                } else if (this.__yearly_day == -1) {
-                  rule.byweekday = [5, 6];
-                }
-              }
-              break;
-            case 1:
-              if (this.__monthly_mode_every) {
-                rule.bymonthday = this.__monthly_days.map(function (v) {
-                  return parseInt(v);
-                });
-              } else {
-                rule.bysetpos = +this.__monthly_pos;
-                if (this.__monthly_day >= 0) {
-                  rule.byweekday = +this.__monthly_day;
-                } else if (this.__monthly_day == -3) {
-                  rule.byweekday = [0, 1, 2, 3, 4, 5, 6];
-                } else if (this.__monthly_day == -2) {
-                  rule.byweekday = [0, 1, 2, 3, 4];
-                } else if (this.__monthly_day == -1) {
-                  rule.setComponent('BYDAY', ['SA', 'SU']);
-                }
-              }
-              break;
-            case 2:
-              rule.setComponent('BYDAY', this.__weekly_days.map(function (v) {
-                return this._weekdayNumberToICAL(+v);
-              }.bind(this)));
-              break;
-            case 3:
-              break;
-          }
-
-          var prop = new ICAL.Property('rrule');
-          prop.setValue(rule);
-          event.component.addProperty(prop);
-        }
-
-        comp.addSubcomponent(event.component);
-        return comp.toString();
-      }
-
-      _uniqueID(){
-        function chr4(){
-          return Math.random().toString(16).slice(-4);
-        }
-        return chr4() + chr4() +
-            '-' + chr4() +
-            '-' + chr4() +
-            '-' + chr4() +
-            '-' + chr4() + chr4() + chr4();
-      }
-
-      _generateEvent() {
-        var event = "";
-      }
-
-      _setHidden() {
-        this.set('__daily_hidden', this.__frequency != 3);
-        this.set('__weekly_hidden', this.__frequency != 2);
-        this.set('__monthly_hidden', this.__frequency != 1);
-        this.set('__yearly_hidden', this.__frequency != 0);
-
-        this.set('__finish_date_hidden', this.__end != 1);
-        this.set('__end_count_hidden', this.__end != 2);
-      }
-
-      _computeMonthlyMode(item, mode) {
-        return item==mode;
-      }
-
-      _changeMonthlyMode(event) {
-        var name = event.target.value;
-        var checked = event.target.checked;
-
-        if((!checked && event.target.value == this.__monthly_mode) || checked) {
-          this.set('__monthly_mode_every', name=='every');
-          if(!checked) {
-            event.target.checked = true;
+            if (this.__monthly_day >= 0) {
+              value.byweekday = +this.__monthly_day;
+            } else if (this.__monthly_day == -3) {
+              value.byweekday = [0, 1, 2, 3, 4, 5, 6];
+            } else if (this.__monthly_day == -2) {
+              value.byweekday = [0, 1, 2, 3, 4];
+            } else if (this.__monthly_day == -1) {
+              value.byweekday = [5, 6];
+            }
+          } else {
+            delete value.bysetpos;
+            delete value.byweekday;
           }
         }
+
+        if(value.freq==0) {
+          if(this.__yearly_on) {
+            value.bysetpos = +this.__yearly_pos;
+
+            if (this.__yearly_day >= 0) {
+              value.byweekday = +this.__yearly_day;
+            } else if (this.__yearly_day == -3) {
+              value.byweekday = [0, 1, 2, 3, 4, 5, 6];
+            } else if (this.__yearly_day == -2) {
+              value.byweekday = [0, 1, 2, 3, 4];
+            } else if (this.__yearly_day == -1) {
+              value.byweekday = [5, 6];
+            }
+          } else {
+            delete value.bysetpos;
+            delete value.byweekday;
+          }
+        }
+
+        if(!value.count || value.count=="") delete value.count;
+        if(!value.until || value.until=="") {
+          delete value.until;
+        } else {
+          value.until = new Date(value.until);
+        }
+
+        return value;
+      }
+
+      _disableMonthlyMode(mode, value) {
+        return mode !== value;
+      }
+
+      _changeRecurrencyMode(event) {
+        this._showRecurrencyMode(event.detail.value);
+      }
+
+      _showRecurrencyMode(value) {
+        this.set('__daily_hidden', value != this.RRule.DAILY);
+        this.set('__weekly_hidden', value != this.RRule.WEEKLY);
+        this.set('__monthly_hidden', value != this.RRule.MONTHLY);
+        this.set('__yearly_hidden', value != this.RRule.YEARLY);
+      }
+
+      _changeEndMode(event) {
+        if(event.detail.value) {
+          this.set('__finish_date_hidden', event.detail.value != 1);
+          this.set('__end_count_hidden', event.detail.value != 2);
+
+          if(event.detail.value != 1) {
+            this.set('rule.until', '');
+            this._ruleChanged();
+          }
+
+          if(event.detail.value != 2) {
+            this.set('rule.count', '');
+            this._ruleChanged();
+          }
+
+        }
+      }
+
+      _arrayToNum(arr) {
+        return arr.map(function(value) {
+          return +value;
+        });
       }
 
       _pad(num, padlen, padchar) {
@@ -761,28 +845,19 @@
         return (pad + num).slice(-pad.length);
       }
 
-      // Value related functions
-      _recurrencyIdToICAL(id) {
-        return [ 'YEARLY', 'MONTHLY', 'WEEKLY', 'DAILY' ][id];
-      }
-
-      _weekdayNumberToICAL(id) {
-        return [ 'MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU' ][id];
-      }
-
       toText() {
         var text = "";
 
-        if(this.__start_date == this.__end_date) {
-          text = "El " + this.__start_date + " de " + this.__start_time + " a " + this.__end_time;
+        if(this.start_date == this.end_date) {
+          text = "El " + this.start_date + " de " + this.start_time + " a " + this.end_time;
         } else {
-          text = "De las " + this.__start_time + " del " + this.__start_date + " a las " + this.__end_time
-            + " del " + this.__end_date;
+          text = "De las " + this.start_time + " del " + this.start_date + " a las " + this.end_time
+            + " del " + this.end_date;
         }
 
         if(this.rule) {
           var lang = this._spanish();
-          text += ", repetido " + this.rule.toText(lang.gettext, lang.spanish);
+          text += ", repetido " + this._rrule.toText(lang.gettext, lang.spanish);
         }
 
         return text;
