@@ -692,12 +692,12 @@
 
         if(options.until) {
           ops.until = this._dateToString(options.until);
-          app.$.calendar2.$.ending_mode.select("1");
+          this.$.ending_mode.select("1");
         }
 
         if(options.count) {
           ops.count = options.count;
-          app.$.calendar2.$.ending_mode.select("2");
+          this.$.ending_mode.select("2");
         }
         return ops;
       }
