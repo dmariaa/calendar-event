@@ -509,7 +509,7 @@
            */
           nameFieldRequired: {
             type: Boolean,
-            value: true
+            value: false
           },
 
           /**
@@ -624,22 +624,45 @@
       }
 
       _valueChanged(newValue, oldValue) {
-        if(!newValue) return;
+        if(newValue==undefined) newValue="";
 
         if(this.__internalChange) {
           this.__internalChange=false;
           return;
         }
+
         this._parseValue(newValue);
       }
 
       _parseValue(value) {
-        //console.log("Parsing value: " + value);
-        var r = RRule.fromString(value);
-        var ops = this._parseOptionsRule(r.options);
-        //console.log("Setting rule to: " + JSON.stringify(ops));
-        this.set('rule', ops);
-        this._showRecurrencyMode(r.options.freq);
+        if(value=="") {
+          this._resetRule();
+        } else {
+          var r = RRule.fromString(value);
+          var ops = this._parseOptionsRule(r.options);
+          this.set('rule', ops);
+          this._showRecurrencyMode(r.options.freq);
+        }
+      }
+
+      _resetRule() {
+        var r = {};
+        r.dtstart = this.start_date;
+        r.interval = 1;
+        r.freq = RRule.DAILY;
+        r.byweekday = [];
+        r.bymonthday = [];
+        r.bymonth = [];
+
+        this.is_recurring = false;
+        this.__monthly_mode='every';
+        this.__monthly_day = 0;
+        this.__monthly_pos = 0;
+        this.__yearly_on = false;
+        this.__yearly_day = 0;
+        this.__yearly_pos = 0;
+        this.rule = r;
+        this._showRecurrencyMode(r.freq);
       }
 
       _parseOptionsRule(options) {
@@ -708,10 +731,11 @@
         return s;
       }
 
-      _ruleChanged() {
+
+      _ruleChanged(changes) {
         if(!this.is_recurring) {
           this.__internalChange = true;
-          this.set('value', undefined);
+          this.set('value', "");
           return;
         }
 
@@ -735,7 +759,6 @@
           this.__internalChange = true;
           this.value = v;
           this.text = this.toText();
-          //console.log(this.value);
         } catch(e) {
           console.error(e);
         }
@@ -769,9 +792,7 @@
             delete value.bysetpos;
             delete value.byweekday;
           }
-        }
-
-        if(value.freq==0) {
+        } else if(value.freq==0) {
           if(this.__yearly_on) {
             value.bysetpos = +this.__yearly_pos;
 
