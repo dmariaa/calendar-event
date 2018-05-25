@@ -193,24 +193,23 @@
     </style>
 
     <!-- Name block -->
-    <template is="dom-if" if="[[!nameFieldHidden]]">
     <div class="form-row">
-      <paper-input value="{{name}}" label="Nombre *" class="event-name" required="[[nameFieldRequired]]"
-                   error-message="Campo obligatorio"></paper-input>
+      <paper-input value="{{name}}" label="Nombre" class="event-name" required="[[nameRequired]]"
+                   error-message="Campo obligatorio" hidden="[[nameHidden]]"></paper-input>
     </div>
-    </template>
 
     <!-- Start date and times block -->
     <div class="form-row form-row-justify-left dates-row">
       <paper-input-date value="{{start_date}}" label="Desde *" class="event-date" required
                         error-message="Campo obligatorio"></paper-input-date>
       <paper-input-time id="start_time" value="{{start_time}}" label="Inicio" class="event-time"
-                   disabled$="[[all_day]]" always-float-label></paper-input-time>
+                        disabled$="[[all_day]]" always-float-label></paper-input-time>
       <span> a </span>
       <paper-input-time value="{{end_time}}" label="Fin" class="event-time"
-                   disabled$="[[all_day]]" always-float-label></paper-input-time>
+                        disabled$="[[all_day]]" always-float-label></paper-input-time>
       <paper-input-date value="{{end_date}}" label="Hasta *" class="event-date end-date" required
-                        error-message="Campo obligatorio" disabled$="[[all_day]]"></paper-input-date>
+                        error-message="Campo obligatorio" disabled$="[[all_day]]"
+                        hidden="[[endDateHidden]]"></paper-input-date>
     </div>
     <div class="form-row">
       <paper-checkbox checked="{{all_day}}">Todo el dia</paper-checkbox>
@@ -223,11 +222,11 @@
                    hidden="[[!is_recurring]]"></paper-input>
       <paper-dropdown-menu label="Frecuencia" hidden="[[!is_recurring]]" class="frequency">
         <paper-listbox
-                attr-for-selected="value"
-                slot="dropdown-content"
-                selected="{{rule.freq}}"
-                on-selected-changed="_changeRecurrencyMode"
-                fallback-selection="[[RRule.DAILY]]">
+          attr-for-selected="value"
+          slot="dropdown-content"
+          selected="{{rule.freq}}"
+          on-selected-changed="_changeRecurrencyMode"
+          fallback-selection="[[RRule.DAILY]]">
           <paper-item value$="[[RRule.DAILY]]">Día</paper-item>
           <paper-item value$="[[RRule.WEEKLY]]">Semana</paper-item>
           <paper-item value$="[[RRule.MONTHLY]]">Mes</paper-item>
@@ -321,10 +320,10 @@
                 </paper-dropdown-menu>
                 <paper-dropdown-menu label="Día"  disabled="[[_disableMonthlyMode(__monthly_mode, 'on')]]">
                   <paper-listbox
-                      slot="dropdown-content"
-                      attr-for-selected="value"
-                      selected="{{__monthly_day}}"
-                      fallback-selection="0">
+                    slot="dropdown-content"
+                    attr-for-selected="value"
+                    selected="{{__monthly_day}}"
+                    fallback-selection="0">
                     <paper-item value="0">Lunes</paper-item>
                     <paper-item value="1">Martes</paper-item>
                     <paper-item value="2">Miércoles</paper-item>
@@ -380,10 +379,10 @@
             </paper-dropdown-menu>
             <paper-dropdown-menu label="Día" disabled$="[[!__yearly_on]]">
               <paper-listbox
-                  slot="dropdown-content"
-                  attr-for-selected="value"
-                  selected="{{__yearly_day}}"
-                  fallback-selection="0">
+                slot="dropdown-content"
+                attr-for-selected="value"
+                selected="{{__yearly_day}}"
+                fallback-selection="0">
                 <paper-item value="0">Lunes</paper-item>
                 <paper-item value="1">Martes</paper-item>
                 <paper-item value="2">Miércoles</paper-item>
@@ -499,7 +498,7 @@
           /**
            * Hide the name field
            */
-          nameFieldHidden: {
+          nameHidden: {
             type: Boolean,
             value: false
           },
@@ -507,7 +506,7 @@
           /**
            * Is name field required
            */
-          nameFieldRequired: {
+          nameRequired: {
             type: Boolean,
             value: false
           },
@@ -519,8 +518,7 @@
             type: String,
             notify: true,
             value: function() {
-              var d = new Date();
-              return d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2);
+              return this._defaultDate();
             }
           },
 
@@ -531,9 +529,14 @@
             type: String,
             notify: true,
             value: function() {
-              var d = new Date();
-              return d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2);
+              return this._defaultDate();
             }
+          },
+
+          endDateHidden: {
+            type: Boolean,
+            value: false,
+            notify: true
           },
 
           /**
@@ -543,9 +546,7 @@
             type: String,
             notify: true,
             value: function() {
-              var d = new Date();
-              var s = this._pad(d.getHours(),2)+":"+this._pad(d.getMinutes(),2)+":"+this._pad(d.getSeconds(),2);
-              return s;
+              return this._defaultTime();
             }
           },
 
@@ -556,9 +557,7 @@
             type: String,
             notify: true,
             value: function() {
-              var d = new Date();
-              var s = this._pad(d.getHours(),2)+":"+this._pad(d.getMinutes(),2)+":"+this._pad(d.getSeconds(),2);
-              return s;
+              return this._defaultTime();
             }
           },
 
@@ -566,7 +565,9 @@
            * Is all day event
            */
           all_day: {
-            type: Boolean
+            type: Boolean,
+            notify: true,
+            observer: '_allDayChanged'
           },
 
           /**
@@ -610,6 +611,17 @@
         this.__yearly_hidden=true;
       }
 
+      /** Properties default values */
+      _defaultDate() {
+        var d = new Date();
+        return d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2);
+      }
+
+      _defaultTime() {
+        var d = new Date();
+        return this._pad(d.getHours(),2)+":"+this._pad(d.getMinutes(),2)+":"+this._pad(d.getSeconds(),2);
+      }
+
       ready() {
         super.ready();
         this._createMethodObserver('_ruleChanged(rule.*, start_date, is_recurring, __monthly_mode, __yearly_on, __monthly_pos, __monthly_day, __yearly_pos, __yearly_day)');
@@ -634,6 +646,14 @@
         this._parseValue(newValue);
       }
 
+      _allDayChanged(newValue, oldValue) {
+        if(newValue==undefined) return;
+        if(newValue) {
+          this.set('start_time', "00:00:00");
+          this.set('end_time', "23:59:59");
+        }
+      }
+
       _parseValue(value) {
         if(value=="") {
           this._resetRule();
@@ -643,6 +663,16 @@
           this.set('rule', ops);
           this._showRecurrencyMode(r.options.freq);
         }
+      }
+
+      reset() {
+        this.set('start_date', this._defaultDate());
+        this.set('start_time', this._defaultTime());
+        this.set('end_date', this._defaultDate());
+        this.set('end_time', this._defaultTime());
+        this.set('all_day', false);
+        this.$.ending_mode.select("0");
+        this.set('value', "");
       }
 
       _resetRule() {
@@ -669,9 +699,9 @@
         var ops = new Object();
         ops.freq = options.freq;
         ops.interval = options.interval;
-        ops.byweekday = options.byweekday;
-        ops.bymonthday = options.bymonthday;
-        ops.bymonth = options.bymonth;
+        ops.byweekday = this._arrayToString(options.byweekday);
+        ops.bymonthday = this._arrayToString(options.bymonthday);
+        ops.bymonth = this._arrayToString(options.bymonth);
 
         if(options.bysetpos && options.bysetpos.length > 0) {
           if(options.freq==1) {
@@ -725,13 +755,6 @@
         return ops;
       }
 
-      _dateToString(date) {
-        var d = new Date(date);
-        var s = d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2);
-        return s;
-      }
-
-
       _ruleChanged(changes) {
         if(!this.is_recurring) {
           this.__internalChange = true;
@@ -759,6 +782,9 @@
           this.__internalChange = true;
           this.value = v;
           this.text = this.toText();
+
+          var event = new CustomEvent('calendar-event-changed', {bubbles: true, composed: true});
+          this.dispatchEvent(event);
         } catch(e) {
           console.error(e);
         }
@@ -854,9 +880,23 @@
         }
       }
 
+      _dateToString(date) {
+        var d = new Date(date);
+        var s = d.getFullYear() + "-" + this._pad(d.getMonth()+1,2) + "-" + this._pad(d.getDate(),2);
+        return s;
+      }
+
       _arrayToNum(arr) {
+        arr = arr || [];
         return arr.map(function(value) {
           return +value;
+        });
+      }
+
+      _arrayToString(arr) {
+        arr = arr || [];
+        return arr.map(function(value) {
+          return value.toString();
         });
       }
 
@@ -912,38 +952,38 @@
         };
 
         var strings = {
-            'every': 'cada',
-            'until': 'hasta',
-            'for': 'por',
-            'times': 'veces',
-            'time': 'vez',
-            '(~ approximate)': '(aproximadamente)',
-            'hours': 'horas',
-            'hour': 'hora',
-            'minutes': 'minutos',
-            'weekdays': 'dias laborables',
-            'weekday': 'dia laborable',
-            'days': 'dias',
-            'day': 'dia',
-            'in': 'en',
-            'weeks': 'semanas',
-            'week': 'semana',
-            'on': 'el',
-            'months': 'meses',
-            'month': 'mes',
-            'years': 'años',
-            'year': 'año',
-            'on the': 'el',
-            'and': 'y',
-            'or': 'o',
-            'the': 'el',
-            'at': 'a las',
-            'last': 'ultimo',
-            'st': '',
-            'nd': '',
-            'rd': '',
-            'th': ''
-          };
+          'every': 'cada',
+          'until': 'hasta',
+          'for': 'por',
+          'times': 'veces',
+          'time': 'vez',
+          '(~ approximate)': '(aproximadamente)',
+          'hours': 'horas',
+          'hour': 'hora',
+          'minutes': 'minutos',
+          'weekdays': 'dias laborables',
+          'weekday': 'dia laborable',
+          'days': 'dias',
+          'day': 'dia',
+          'in': 'en',
+          'weeks': 'semanas',
+          'week': 'semana',
+          'on': 'el',
+          'months': 'meses',
+          'month': 'mes',
+          'years': 'años',
+          'year': 'año',
+          'on the': 'el',
+          'and': 'y',
+          'or': 'o',
+          'the': 'el',
+          'at': 'a las',
+          'last': 'ultimo',
+          'st': '',
+          'nd': '',
+          'rd': '',
+          'th': ''
+        };
 
         function gettext(id) {
           return strings[id] || id
