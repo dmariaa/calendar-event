@@ -744,7 +744,7 @@
         }
 
         if(options.until) {
-          ops.until = this._dateToString(options.until, "23:59:59");
+          ops.until = this._dateToString(options.until);
           this.$.ending_mode.select("1");
         }
 
@@ -841,7 +841,7 @@
         if(!value.until || value.until=="") {
           delete value.until;
         } else {
-          value.until = new Date(value.until);
+          value.until = new Date(value.until+"T23:59:59Z");
         }
 
         return value;
