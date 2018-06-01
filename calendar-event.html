@@ -841,7 +841,7 @@
         if(!value.until || value.until=="") {
           delete value.until;
         } else {
-          value.until = new Date(value.until+"T23:59:59Z");
+          value.until = new Date(value.until+"T23:59:59");
         }
 
         return value;
